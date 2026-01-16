@@ -13,21 +13,19 @@ LAST_RUN_FILE = ".last_run"
 CONFIG_FILE = "config.yml"
 OUTPUT_DIR = "digests"
 
-def read_last_run
-  if File.exist?(LAST_RUN_FILE)
-    Time.parse(File.read(LAST_RUN_FILE).strip)
-  else
-    Time.now - (24 * 60 * 60) # Default 24 hours ago
-  end
-end
+Item = Data.define(:title, :link, :date)
+FeedResult = Data.define(:title, :link, :items)
 
-def write_last_run(time)
-  File.write(LAST_RUN_FILE, time.iso8601)
+def read_last_run
+  return Time.now - (24 * 60 * 60) unless File.exist?(LAST_RUN_FILE)
+
+  Time.parse(File.read(LAST_RUN_FILE).strip)
 end
 
 def read_feeds
-  config = YAML.load_file(CONFIG_FILE)
-  config["feeds"] || []
+  return [] unless File.exist?(CONFIG_FILE)
+
+  YAML.load_file(CONFIG_FILE).fetch("feeds", [])
 end
 
 def fetch_feed(url, redirect_limit = 5)
@@ -40,8 +38,6 @@ def fetch_feed(url, redirect_limit = 5)
   http.read_timeout = 10
 
   request = Net::HTTP::Get.new(uri.request_uri)
-  request["User-Agent"] = "RubyDigest/1.0"
-
   response = http.request(request)
 
   case response
@@ -54,10 +50,6 @@ def fetch_feed(url, redirect_limit = 5)
   end
 end
 
-def parse_feed(content)
-  RSS::Parser.parse(content, false)
-end
-
 def extract_items(feed, since)
   items = []
 
@@ -67,26 +59,26 @@ def extract_items(feed, since)
       pub_date = entry.updated&.content || entry.published&.content
       next unless pub_date && pub_date > since
 
-      items << {
+      items << Item.new(
         title: (entry.title&.content || "Untitled").gsub(/\s+/, " ").strip,
         link: entry.link&.href || entry.links.first&.href,
         date: pub_date
-      }
+      )
     end
   when RSS::Rss
     feed.items.each do |item|
       pub_date = item.pubDate || item.date
       next unless pub_date && pub_date > since
 
-      items << {
+      items << Item.new(
         title: (item.title || "Untitled").gsub(/\s+/, " ").strip,
         link: item.link,
         date: pub_date
-      }
+      )
     end
   end
 
-  items.sort_by { |i| i[:date] }.reverse
+  items.sort_by(&:date).reverse
 end
 
 def feed_title(feed, url)
@@ -116,19 +108,15 @@ def generate_digest(feed_results)
   lines << ""
 
   feed_results.each do |result|
-    next if result[:items].empty?
+    next if result.items.empty?
 
-    lines << "- [#{result[:title]}](#{result[:link]})"
-    result[:items].each do |item|
-      lines << "  - [#{item[:title]}](#{item[:link]})"
+    lines << "- [#{result.title}](#{result.link})"
+    result.items.each do |item|
+      lines << "  - [#{item.title}](#{item.link})"
     end
   end
 
   lines.join("\n") + "\n"
-end
-
-def has_new_items?(feed_results)
-  feed_results.any? { |r| r[:items].any? }
 end
 
 def update_readme_symlink(digest_file)
@@ -139,35 +127,36 @@ def update_readme_symlink(digest_file)
   FileUtils.ln_s(target, readme)
 end
 
-def main
+def generate
   since = read_last_run
   puts "Checking for items since: #{since.iso8601}"
 
   feeds = read_feeds
   puts "Found #{feeds.length} feeds in config"
 
-  feed_results = []
-
-  feeds.each do |url|
-    print "Fetching #{url}... "
-    begin
+  threads = feeds.map do |url|
+    Thread.new do
       content = fetch_feed(url)
-      feed = parse_feed(content)
+      feed = RSS::Parser.parse(content, false)
       items = extract_items(feed, since)
-      title = feed_title(feed, url)
-      link = feed_link(feed, url)
-
-      feed_results << { title: title, link: link, items: items }
-      puts "#{items.length} new items"
+      FeedResult.new(
+        title: feed_title(feed, url),
+        link: feed_link(feed, url),
+        items: items
+      )
     rescue => e
-      puts "Error: #{e.message}"
+      puts "Error fetching #{url}: #{e.message}"
+      nil
     end
   end
 
-  if has_new_items?(feed_results)
+  feed_results = threads.map(&:join).map(&:value).compact
+
+  if feed_results.any? { |r| r.items.any? }
     FileUtils.mkdir_p(OUTPUT_DIR)
     output_file = File.join(OUTPUT_DIR, "#{Date.today}.md")
     digest_content = generate_digest(feed_results)
+
     File.write(output_file, digest_content)
     puts "Wrote digest to #{output_file}"
 
@@ -177,8 +166,8 @@ def main
     puts "No new items, skipping digest"
   end
 
-  write_last_run(Time.now)
+  File.write(LAST_RUN_FILE, Time.now.iso8601)
   puts "Updated #{LAST_RUN_FILE}"
 end
 
-main if __FILE__ == $0
+generate if __FILE__ == $0
