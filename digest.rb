@@ -7,12 +7,17 @@ require "net/http"
 require "date"
 require "time"
 require "uri"
+require "optparse"
 
 LAST_RUN_FILE = ".last_run"
 CONFIG_FILE = "config.yml"
 
 Item = Data.define(:title, :link, :date)
-FeedResult = Data.define(:title, :link, :items)
+FeedResult = Data.define(:title, :link, :items) do
+  def empty?
+    items.empty?
+  end
+end
 
 def read_last_run
   return Time.now - (24 * 60 * 60) unless File.exist?(LAST_RUN_FILE)
@@ -138,7 +143,17 @@ def fetch_feeds(urls, since)
   threads.map(&:join).map(&:value).compact
 end
 
-def generate
+def write_digest_file(filename, content)
+  File.write(filename, content)
+  puts "Wrote digest to #{filename}"
+end
+
+def update_last_run
+  File.write(LAST_RUN_FILE, Time.now.iso8601)
+  puts "Updated #{LAST_RUN_FILE}"
+end
+
+def generate(dry_run: false)
   since = read_last_run
   puts "Checking for items since: #{since.iso8601}"
 
@@ -150,19 +165,31 @@ def generate
 
     feed_results = fetch_feeds(feeds, since)
 
-    if feed_results.any? { |r| r.items.any? }
-      output_file = "#{name}.md"
-      digest_content = generate_digest(name, feed_results)
-
-      File.write(output_file, digest_content)
-      puts "Wrote digest to #{output_file}"
-    else
+    if feed_results.all?(&:empty?)
       puts "No new items for #{name}, skipping"
+      next
     end
-  end
 
-  File.write(LAST_RUN_FILE, Time.now.iso8601)
-  puts "Updated #{LAST_RUN_FILE}"
+    output_filename = "#{name}.md"
+    digest_content = generate_digest(name, feed_results)
+
+    if dry_run
+      puts "=== #{output_filename} ==="
+      puts digest_content
+      puts "=== End of #{output_filename} ==="
+      next
+    end
+
+    write_digest_file(output_filename, digest_content)
+  end
 end
 
-generate if __FILE__ == $0
+dry_run = false
+if __FILE__ == $0
+  OptionParser.new do |opts|
+    opts.on("-n", "--dry-run", "Print to stdout instead of writing files") { dry_run = true }
+  end.parse!
+end
+
+generate(dry_run:)
+update_last_run unless dry_run
