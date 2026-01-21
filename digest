@@ -24,8 +24,8 @@ fi
 
 if command -v fzf &>/dev/null; then
   git tag --sort=-creatordate \
-    | fzf --preview "git show {}:$file | glow --style=dark -w0 - 2>/dev/null || git show {}:$file" \
-          --preview-window=right:80%:wrap \
+    | fzf --preview "git show {}:$file | bat --style=numbers --color=always --theme auto:system --language=markdown -S 2>/dev/null || git show {}:$file" \
+          --preview-window=top:80%:wrap \
     || true
 else
   tag=$(git tag --sort=-creatordate | head -1)

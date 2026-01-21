@@ -10,17 +10,25 @@ To get the latest digest, pull the repo or browse to `{name}.md` on GitHub. Dail
 
 ### Terminal Browsing 
 
-Using `git` and `fzf`, you can browse digests by tag in the terminal:
+Use `git show` with the desired tag and digest file:
 
 ```shell
-$ git tag --sort=-creatordate | fzf --preview 'git show {}:<DIGEST_FILE>.md' --preview-window=right:80%:wrap
+$ git show v2026-01-15:ruby.md
+```
+
+Using `git` and `fzf`, you can browse digests by tag via a preview window:
+
+```shell
+$ git tag --sort=-creatordate | fzf --preview 'git show {}:<DIGEST_FILE>.md' --preview-window=top:80%:wrap
 ```
 
 For markdown rendering, I recommend [`glow`](https://github.com/charmbracelet/glow):
 
 ```shell
-$ git tag --sort=-creatordate | fzf --preview 'git show {}:<DIGEST_FILE>.md | glow -' --preview-window=right:80%:wrap
+$ git tag --sort=-creatordate | fzf --preview 'git show {}:<DIGEST_FILE>.md | glow -w0' --preview-window=top:80%:wrap
 ```
+
+The included `./digest` executable uses [`bat`](https://github.com/sharkdp/bat) for syntax highlighting, rather than rendering.
 
 ## Generating
 
