@@ -1,7 +1,9 @@
-# Ruby Digest - 2026-01-26
+# Ruby Digest - 2026-01-28
 
 - [Recent Commits to rails:main](https://github.com/rails/rails/commits/main)
-  - [Merge pull request #56668 from pgoslatara/actup/update-actions-176917…](https://github.com/rails/rails/commit/2b4feede1b6ead327b40c3415749de58af896e05)
-  - [Merge pull request #56679 from Saidbek/fix-overlapping-acronyms-order](https://github.com/rails/rails/commit/b84b5ff3faff056b0511ca7ff1ade96ddb0430bb)
-  - [Merge pull request #56678 from camallen/console-disable-query-cache-w…](https://github.com/rails/rails/commit/2d1b2bce3a8dd0c1606f723dfbc45277214b9c7a)
-  - [Merge pull request #56670 from schmijos/patch-2](https://github.com/rails/rails/commit/8c748c8d77a44cb39ce82e8c2e62d0c2b67f0b74)
+  - [Merge pull request #56687 from Saidbek/remove-unused-delegate-require…](https://github.com/rails/rails/commit/49bb5ebeadfb8806900668347e83a6fed25c1452)
+  - [Remove unused require delegate from MemCacheStore](https://github.com/rails/rails/commit/2fec31affd8a23ad51e19fb168d74c411bed2ec1)
+  - [Merge pull request #56686 from Saidbek/fix-overlapping-acronyms-order…](https://github.com/rails/rails/commit/09c1c9fd4d5d68ba796c1b4950c8bf6f56d9a5a0)
+  - [Added changelog](https://github.com/rails/rails/commit/15a24fe3827b3d55a4ad9a5eef0c923db97fd303)
+  - [Remove unnecessary changelog](https://github.com/rails/rails/commit/6043752ecd7397583850d3d6330b17cfdac6ce44)
+  - [Merge pull request #56282 from harsh183/hd/fix_guides_dir_output](https://github.com/rails/rails/commit/08a6efe04fa16316a95e8f4ebdd13a5150bdd211)
